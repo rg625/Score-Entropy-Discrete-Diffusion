@@ -145,11 +145,11 @@ def _run(rank, world_size, cfg):
     while state['step'] < num_train_steps + 1:
         step = state['step']
 
-
-        if cfg.data.train != "text8":
-            batch = next(train_iter)['input_ids'].to(device)
-        else:
-            batch = next(train_iter).to(device)
+        # --- FIX: Unified Batch Handling ---
+        # Fetch dictionary, extract input_ids, move to device
+        batch_data = next(train_iter)
+        batch = batch_data['input_ids'].to(device)
+        
         loss = train_step_fn(state, batch)
 
         # flag to see if there was movement ie a full batch got computed
@@ -164,16 +164,72 @@ def _run(rank, world_size, cfg):
                 utils.save_checkpoint(checkpoint_meta_dir, state)
 
             if step % cfg.training.eval_freq == 0:
-                if cfg.data.valid != "text8":
-                    eval_batch = next(eval_iter)['input_ids'].to(device)
-                else:
-                    eval_batch = next(train_iter).to(device)
+                # --- FIX: Unified Eval Batch Handling ---
+                eval_batch_data = next(eval_iter)
+                eval_batch = eval_batch_data['input_ids'].to(device)
+                
                 eval_loss = eval_step_fn(state, eval_batch)
 
                 dist.all_reduce(eval_loss)
                 eval_loss /= world_size
 
                 mprint("step: %d, evaluation_loss: %.5e" % (step, eval_loss.item()))
+
+            # --- BPC Evaluation Block (Run every 100k steps) ---
+            if step > 0 and step % 100000 == 0:
+                mprint(f"Starting BPC evaluation at step {step}...")
+                
+                # Settings
+                n_bpc_batches = 50  # Number of batches to average over
+                total_nats = 0.0
+                total_chars = 0
+                
+                # We perform this calculation in a no_grad context
+                # Note: eval_step_fn handles EMA loading/unloading internally
+                with torch.no_grad():
+                    for i in range(n_bpc_batches):
+                        # 1. Get next batch
+                        try:
+                            bpc_batch_data = next(eval_iter)
+                        except StopIteration:
+                            eval_iter = iter(eval_ds)
+                            bpc_batch_data = next(eval_iter)
+                        
+                        bpc_batch = bpc_batch_data['input_ids'].to(device)
+                        batch_size = bpc_batch.shape[0]
+
+                        # 2. Calculate Loss (Nats per Sequence)
+                        # eval_step_fn returns: Mean Nats per Sequence (scalar)
+                        avg_nats_per_seq = eval_step_fn(state, bpc_batch)
+                        
+                        # We need the sum of nats for the specific local batch
+                        # (We multiply by batch_size because step_fn did a .mean())
+                        local_batch_nats = avg_nats_per_seq * batch_size
+
+                        # 3. Decode to count characters (CPU operation)
+                        # We decode to get the accurate UTF-8 character length
+                        cpu_tokens = bpc_batch.cpu().numpy()
+                        decoded_texts = tokenizer.batch_decode(cpu_tokens)
+                        local_char_count = sum(len(text) for text in decoded_texts)
+
+                        # 4. Distributed Aggregation
+                        # We must aggregate Nats and Chars across all GPUs
+                        
+                        # Prepare tensors for reduction
+                        metrics_tensor = torch.tensor([local_batch_nats.item(), local_char_count], device=device)
+                        dist.all_reduce(metrics_tensor) # Sums across all GPUs
+                        
+                        # Update totals
+                        total_nats += metrics_tensor[0].item()
+                        total_chars += metrics_tensor[1].item()
+
+                # 5. Final Calculation
+                # Bits = Nats / ln(2)
+                total_bits = total_nats / np.log(2)
+                bpc = total_bits / total_chars
+                
+                mprint(f"Step: {step} | Test BPC (over {n_bpc_batches} batches): {bpc:.4f}")
+                dist.barrier()
 
             if step > 0 and step % cfg.training.snapshot_freq == 0 or step == num_train_steps:
                 # Save the checkpoint.
@@ -221,3 +277,4 @@ def _run(rank, world_size, cfg):
                             del eval_model, logits, loss
 
                     dist.barrier()
+                    

@@ -3,7 +3,7 @@ defaults:
   - model: small
   - override hydra/launcher: submitit_slurm
 
-ngpus: 8
+ngpus: 1
 tokens: 50257
 
 training:
@@ -19,7 +19,7 @@ training:
   ema: 0.9999
 
 data:
-  train: openwebtext
+  train: text8
   valid: wikitext103
   cache_dir: data
 
