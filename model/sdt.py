@@ -621,7 +621,7 @@ class SequenceVDTContinuousModelv2(nn.Module):
 
         # ---- read config ----
         P = int(cfg.model.patch_size)
-        E = int(cfg.model.embed_dim)
+        E = int(cfg.model.hidden_dim)
         L = int(cfg.model.n_blocks)
         H = int(cfg.model.n_heads)
         OD = int(getattr(cfg.model, "out_dim", 1))
@@ -726,7 +726,7 @@ class SequenceVDTContinuousModelv2(nn.Module):
         # ----- HEADS -----
         if self.head_type == "patch_bits_sedd":
             # E_head can equal E, or be smaller (configurable)
-            self.E_head = int(getattr(cfg.model, "head_embed_dim", self.E))
+            self.E_head = int(getattr(cfg.model, "head_hidden_dim", self.E))
 
             # From patch token [E] → P * E_head per patch
             self.patch_to_bits = nn.Linear(self.E, self.P * self.E_head)

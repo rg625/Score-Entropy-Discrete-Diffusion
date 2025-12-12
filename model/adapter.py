@@ -48,9 +48,9 @@ class ModelConfigAdapter:
         cfg.model = config_dict.ConfigDict()
         
         # Dimensions
-        cfg.model.embed_dim = getattr(c_model, 'hidden_size', 128)
+        cfg.model.hidden_dim = getattr(c_model, 'hidden_size', 128)
         
-        # Note: Your config has 'cond_dim' (128). The new VDT model uses 'embed_dim' 
+        # Note: Your config has 'cond_dim' (128). The new VDT model uses 'hidden_dim' 
         # for time embeddings internally. Since they match (128==128) in your config, this is fine.
         
         cfg.model.n_blocks = getattr(c_model, 'n_blocks', 2)
@@ -65,7 +65,7 @@ class ModelConfigAdapter:
         cfg.model.patch_size = 1 
         
         # Content Dims
-        cfg.model.content_dim_discrete = cfg.model.embed_dim
+        cfg.model.content_dim_discrete = cfg.model.hidden_dim
         cfg.model.content_dim_continuous = 1 
         
         # Advanced Head & Attn Config
@@ -78,7 +78,7 @@ class ModelConfigAdapter:
         cfg.model.n_fourier_global = 8
         cfg.model.n_fourier_local = 4
         cfg.model.rpb_max_distance = 64
-        cfg.model.dim_ff = getattr(c_model, 'dim_ff', cfg.model.embed_dim * 4)
+        cfg.model.dim_ff = getattr(c_model, 'dim_ff', cfg.model.hidden_dim * 4)
 
         # --- Data Section ---
         cfg.data = config_dict.ConfigDict()
@@ -109,7 +109,7 @@ class SEDDCompatibilityWrapper(nn.Module):
         
         # 3. Print verification
         print(f"\n[Model Adapter] Successfully migrated config '{getattr(old_config, 'name', 'unknown')}'")
-        print(f" - Embed Dim: {self.new_cfg.model.embed_dim}")
+        print(f" - Embed Dim: {self.new_cfg.model.hidden_dim}")
         print(f" - Patch Size: {self.new_cfg.model.patch_size}")
         print(f" - Vocab Size: {self.new_cfg.data.vocab_size} (Tokens: {self.new_cfg.model.out_dim} + Mask)")
         print(f" - Flash Attn: {self.new_cfg.model.use_flash_attn}\n")

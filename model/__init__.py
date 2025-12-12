@@ -1,2 +1,2 @@
-from .transformer import SEDD
-from .sdt import SequenceVDTContinuousModelv2
+# from .transformer import SEDD
+from model.adapter import SEDDCompatibilityWrapper as SEDD
