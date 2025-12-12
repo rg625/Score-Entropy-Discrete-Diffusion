@@ -20,3 +20,7 @@ assets/
 core
 **.log
 *.jsonl
+*.err
+*.out
+*.sh
+*.yaml

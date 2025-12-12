@@ -43,10 +43,11 @@ def _apply_rotary_pos_emb_torchscript(qkv, cos, sin):
 def apply_rotary_pos_emb(qkv, cos, sin):
     try:
         import flash_attn.layers.rotary
-        cos = cos[0,:,0,0,:cos.shape[-1]//2]
-        sin = sin[0,:,0,0,:sin.shape[-1]//2]
+        cos_flash = cos[0,:,0,0,:cos.shape[-1]//2]
+        sin_flash = sin[0,:,0,0,:sin.shape[-1]//2]        
         return flash_attn.layers.rotary.apply_rotary_emb_qkv_(
-            qkv, cos, sin
+            qkv, cos_flash, sin_flash
         )
     except:
+        # Now 'cos' and 'sin' are still their original full size (64)
         return _apply_rotary_pos_emb_torchscript(qkv, cos, sin)

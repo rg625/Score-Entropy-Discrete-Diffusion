@@ -2,6 +2,7 @@
 
 import hydra
 import os
+import sys
 import numpy as np
 import run_train
 import utils
@@ -10,6 +11,15 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.types import RunMode
 from omegaconf import OmegaConf, open_dict
 
+local_tmp = os.environ.get("SLURM_TMPDIR", "/tmp")
+
+print(f"Setting TMPDIR to: {local_tmp}")
+
+os.environ["TRITON_CACHE_DIR"] = os.path.join(local_tmp, "triton_cache")
+os.environ["TMPDIR"] = os.path.join(local_tmp, "sedd_tmp")
+
+os.makedirs(os.environ["TRITON_CACHE_DIR"], exist_ok=True)
+os.makedirs(os.environ["TMPDIR"], exist_ok=True)
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg):
