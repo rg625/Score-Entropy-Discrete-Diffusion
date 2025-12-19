@@ -9,7 +9,7 @@ ngpus: 1
 tokens: 16384 # openwebtext: 50257, wikitext103: 267,735, text8: 16384
 
 training:
-  batch_size: 512
+  batch_size: 1
   accum: 1
   n_iters: 1300001
   snapshot_freq: 5000
@@ -29,7 +29,6 @@ graph:
   type: absorb
   file: data
   report_all: False
-  potential: potential # score fore orignial parametrization
 
 noise:
   type: loglinear
@@ -56,12 +55,13 @@ optim:
   warmup: 2500
   grad_clip: 1.
 
-
 hydra:
   run:
     dir: exp_local/${data.train}/${now:%Y.%m.%d}/${now:%H%M%S}
+    # dir: exp_local/${data.train}/2025.12.17/181841
   sweep:
     dir: exp/${data.train}/${now:%Y.%m.%d}/${now:%H%M%S}
+    # dir: exp_local/${data.train}/2025.12.17/181841
     subdir: ${hydra.job.num}
   launcher:
     max_num_timeout: 100000
