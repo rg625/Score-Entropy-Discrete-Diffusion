@@ -247,6 +247,7 @@ class SEDD(nn.Module, PyTorchModelHubMixin):
 
         self.output_layer = DDitFinalLayer(config.model.hidden_size, vocab_size, config.model.cond_dim)
         self.scale_by_sigma = config.model.scale_by_sigma
+        self.potential = config.potential=="potential"
 
     
     def _get_bias_dropout_scale(self):
@@ -269,6 +270,10 @@ class SEDD(nn.Module, PyTorchModelHubMixin):
                 x = self.blocks[i](x, rotary_cos_sin, c, seqlens=None)
 
             x = self.output_layer(x, c)
+
+        if self.potential:
+            current_potentials = torch.gather(x, -1, indices[..., None])
+            x = x - current_potentials
 
 
         if self.scale_by_sigma:

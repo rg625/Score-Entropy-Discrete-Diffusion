@@ -211,7 +211,7 @@ def _run(rank, world_size, cfg):
                     writer.add_scalar("val/loss", eval_loss.item(), step)
 
             # --- BPC Evaluation (Every 100k steps) ---
-            if step > 0 and step % 100000 == 0:
+            if step > 0 and step % 10000 == 0:
                 mprint(f"Starting BPC evaluation at step {step}...")
                 n_bpc_batches = 50 
                 total_nats = 0.0
