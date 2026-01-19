@@ -16,6 +16,7 @@ data/
 eval/
 assets/
 **.pth
+**.tokens
 **.npz
 core
 **.log
@@ -24,3 +25,5 @@ core
 *.out
 *.sh
 *.yaml
+*.tgz
+*.csv
